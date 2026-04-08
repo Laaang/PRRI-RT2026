@@ -11,41 +11,42 @@ class LevelManager:
         self.game = game
         self.current_level = 1
         self.level_data = {}
-        self.max_level = 0 #deprecated trebalo bi biti automatic
+        self.max_level = 4 #deprecated trebalo bi biti automatic
         self.current_weapon_type = 'pistol'
         self.initialize_levels()
 
     def initialize_levels(self):
         try:
             import Assets.Levels as levels_pkg
-        
+
             levels_paths = list(levels_pkg.__path__)
             if not levels_paths:
                 raise RuntimeError("Assets.Levels package path not found")
 
             levels_path = levels_paths[0]
 
-            level_folders = sorted(
+            # 1. Look for FILES that match "level1.py", "level2.py", etc.
+            level_files = sorted(
                 name for name in os.listdir(levels_path)
-                if os.path.isdir(os.path.join(levels_path, name))
-                and re.match(r'^Lvl(\d+)$', name)
+                if os.path.isfile(os.path.join(levels_path, name))
+                and re.match(r'^level(\d+)\.py$', name)
             )
 
-            for folder in level_folders:
-                match = re.match(r'^Lvl(\d+)$',folder)
+            # 2. Iterate through the found files
+            for file_name in level_files:
+                match = re.match(r'^level(\d+)\.py$', file_name)
                 level_num = int(match.group(1))
+
+                # 3. Import the module dynamically
                 module_path = f'Assets.Levels.level{level_num}'
                 try:
                     print(f"Importing level {level_num} from {module_path}")
-                    level_module =importlib.import_module(module_path)
-                    self.level_data[level_num] = level_module.get_level_data()
-                except ImportError as e:
-                    from Assets.Levels.base_level import create_base_level_structure
-                    print(f"Import error for level {level_num}: {e}")
-                    self.level_data[level_num] = create_base_level_structure()
+                    level_module = importlib.import_module(module_path)
 
-            self.max_level = max(self.level_data.keys(), default=0)
-            print(f"Loaded {len(self.level_data)} levels. Max level: {self.max_level}")
+                    # Store the loaded data
+                    self.level_data[level_num] = level_module.get_level_data()
+                except Exception as e:
+                    print(f"Failed to load level {level_num}: {e}")
             
 
             """
